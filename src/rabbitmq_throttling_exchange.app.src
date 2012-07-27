@@ -1,0 +1,6 @@
+{application, rabbitmq_throttling_exchange,
+ [{description, "RabbitMQ throttling Exchange"},
+  {vsn, "0.1.0"},
+  {modules, []},
+  {registered, []},
+  {applications, [kernel, stdlib, rabbit, mnesia]}]}.
