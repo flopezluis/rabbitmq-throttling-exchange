@@ -49,8 +49,6 @@
     {requires, database},
     {enables, external_infrastructure}]}).
 
--define(HEADER_PRUE, "prue").
--define(KEEP_NB, 20).
 -define(RH_TABLE, rh_exchange_throttling_table).
 -record(lastSent, {key, timestamp}).
 
