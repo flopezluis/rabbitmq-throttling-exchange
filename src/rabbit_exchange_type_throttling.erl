@@ -54,7 +54,7 @@
 
 description() ->
   [{name, <<"throttling">>},
-   {description, <<"List of Last-value caches exchange.">>}].
+   {description, <<"It adds throttling.">>}].
 
 serialise_events() -> false.
 
@@ -76,7 +76,7 @@ route(#exchange{name = XName}, Delivery) ->
   [RoutingKey|_] = BasicMessage#basic_message.routing_keys,
   ToExchange = extract_header(Headers, <<"to_exchange">>),
   if 
-     %First sent
+     %First message sent
      LastTime == [] ->
         TimeToNextSent = 0;
      true ->
@@ -94,8 +94,9 @@ route(#exchange{name = XName}, Delivery) ->
   %% Not sure about the sleep. Should I make a timeout/event?
   timer:sleep(TimeToNextSent),
   Lastsent = current_time_ms(),
-  %% TODO Store by the destination exchange and I should update not add 
+  %% TODO Store by the destination exchange and maybe also by routing key and I should update not add 
   cache_msg(XName, Lastsent),
+  %% TODO take into account the VirtualHost, now it only supports /
   {Ok, Msg} = rabbit_basic:message({resource,<<"/">>,exchange, ToExchange}, RoutingKey, Content),
   NewDelivery = build_delivery(Delivery, Msg),
   rabbit_basic:publish(NewDelivery),
