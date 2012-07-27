@@ -101,9 +101,7 @@ route(#exchange{name = XName}, Delivery) ->
   {Ok, Msg} = rabbit_basic:message({resource,<<"/">>,exchange, ToExchange}, RoutingKey, Content),
   NewDelivery = build_delivery(Delivery, Msg),
   rabbit_basic:publish(NewDelivery),
-  % TODO I should finf a way to avoid call match_routing_key, because no one should be binding to this exchange
-  % and I don't really now the consequences
-  rabbit_router:match_routing_key(XName, ['_']).
+  [].
 
 validate(_X) -> ok.
 create(_Tx, _X) -> ok.
