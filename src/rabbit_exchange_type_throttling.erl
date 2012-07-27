@@ -93,8 +93,10 @@ route(#exchange{name = XName}, Delivery) ->
           true -> TimeToNextSent = round(ValueTmp)
         end
   end,
+  %% Not sure about the sleep. Should I make a timeout/event?
   timer:sleep(TimeToNextSent),
   Lastsent = current_time_ms(),
+  %% TODO Store by the destination exchange and I should update not add 
   cache_msg(XName, Lastsent),
   {Ok, Msg} = rabbit_basic:message({resource,<<"/">>,exchange, ToExchange}, RoutingKey, Content),
   NewDelivery = build_delivery(Delivery, Msg),
