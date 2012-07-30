@@ -49,12 +49,14 @@
     {requires, database},
     {enables, external_infrastructure}]}).
 
+-define(HEADER_PRUE, "prue").
+-define(KEEP_NB, 20).
 -define(RH_TABLE, rh_exchange_throttling_table).
 -record(lastSent, {key, timestamp}).
 
 description() ->
   [{name, <<"throttling">>},
-   {description, <<"It adds throttling.">>}].
+   {description, <<"List of Last-value caches exchange.">>}].
 
 serialise_events() -> false.
 
@@ -71,12 +73,12 @@ route(#exchange{name = XName}, Delivery) ->
   BasicMessage = (Delivery#delivery.message),
   Content = (BasicMessage#basic_message.content),
   Headers = rabbit_basic:extract_headers(Content),
+  %Get Last sent from Db
   [RoutingKey|_] = BasicMessage#basic_message.routing_keys,
   ToExchange = extract_header(Headers, <<"to_exchange">>),
-  %Get Last sent from Db
   LastTime = get_msgs_from_cache(ToExchange),
   if 
-     %First message sent
+     %First sent
      LastTime == [] ->
         TimeToNextSent = 0;
      true ->
@@ -91,7 +93,7 @@ route(#exchange{name = XName}, Delivery) ->
           true -> TimeToNextSent = round(ValueTmp)
         end
   end,
-  %% TODO may I also store by routing key? and I should update not add 
+  %% TODO may I also store by routing key?
   cache_msg(ToExchange, current_time_ms() + TimeToNextSent),
   {Ok, Msg} = rabbit_basic:message({resource,<<"/">>, exchange, ToExchange}, RoutingKey, Content),
   NewDelivery = build_delivery(Delivery, Msg),
@@ -152,10 +154,16 @@ setup_schema() ->
   end.
 
 %%private
-cache_msg(XName, Timestamp) ->
+cache_msg(Key, Timestamp) ->
   rabbit_misc:execute_mnesia_transaction(
     fun () ->
-      store_msg(XName, Timestamp)
+      case mnesia:wread({rh_exchange_throttling_table, Key}) of
+        [L] -> 
+            Data = L#lastSent{timestamp = Timestamp},
+            mnesia:write(?RH_TABLE, Data, write);
+         _ -> 
+            store_msg(Key, Timestamp)
+        end
     end).
 
 get_msgs_from_cache(XName) ->
