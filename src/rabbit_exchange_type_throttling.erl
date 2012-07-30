@@ -81,7 +81,7 @@ route(#exchange{name = XName}, Delivery) ->
         TimeToNextSent = 0;
      true ->
         MsgPerSecondStr = extract_header(Headers, <<"messages_per_second">>),
-        {MsgPerSecond, _} = string:to_float(binary_to_list(MsgPerSecondStr)),
+        MsgPerSecond = bin_to_num(MsgPerSecondStr),
         MilisecondsBetweenMsg = 1000 / MsgPerSecond,
         Now = current_time_ms(),
         Elapsed = Now - LastTime,
@@ -108,6 +108,14 @@ deliver_message(Timeout, Delivery) ->
         Timeout ->
           rabbit_basic:publish(Delivery),
           ok
+    end.
+
+bin_to_num(Bin) ->
+    %% from http://stackoverflow.com/questions/4328719/erlang-binary-string-to-integer-or-float
+    N = binary_to_list(Bin),
+    case string:to_float(N) of
+        {error,no_float} -> list_to_integer(N);
+        {F,_Rest} -> F
     end.
 
 build_delivery(Delivery, Message) ->
