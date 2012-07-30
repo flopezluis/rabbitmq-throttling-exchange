@@ -71,10 +71,10 @@ route(#exchange{name = XName}, Delivery) ->
   BasicMessage = (Delivery#delivery.message),
   Content = (BasicMessage#basic_message.content),
   Headers = rabbit_basic:extract_headers(Content),
-  %Get Last sent from Db
-  LastTime = get_msgs_from_cache(XName),
   [RoutingKey|_] = BasicMessage#basic_message.routing_keys,
   ToExchange = extract_header(Headers, <<"to_exchange">>),
+  %Get Last sent from Db
+  LastTime = get_msgs_from_cache(ToExchange),
   if 
      %First message sent
      LastTime == [] ->
@@ -91,21 +91,27 @@ route(#exchange{name = XName}, Delivery) ->
           true -> TimeToNextSent = round(ValueTmp)
         end
   end,
-  %% Not sure about the sleep. Should I make a timeout/event?
-  timer:sleep(TimeToNextSent),
-  Lastsent = current_time_ms(),
-  %% TODO Store by the destination exchange and maybe also by routing key and I should update not add 
-  cache_msg(XName, Lastsent),
-  %% TODO take into account the VirtualHost, now it only supports /
-  {Ok, Msg} = rabbit_basic:message({resource,<<"/">>,exchange, ToExchange}, RoutingKey, Content),
+  %% TODO may I also store by routing key? and I should update not add 
+  cache_msg(ToExchange, current_time_ms() + TimeToNextSent),
+  {Ok, Msg} = rabbit_basic:message({resource,<<"/">>, exchange, ToExchange}, RoutingKey, Content),
   NewDelivery = build_delivery(Delivery, Msg),
-  rabbit_basic:publish(NewDelivery),
+  Pid = spawn(fun () -> deliver_message(TimeToNextSent, NewDelivery) end),
   [].
 
 validate(_X) -> ok.
 create(_Tx, _X) -> ok.
 
+deliver_message(Timeout, Delivery) ->
+    %%It delivers the message after the timeout
+    receive 
+    after 
+        Timeout ->
+          rabbit_basic:publish(Delivery),
+          ok
+    end.
+
 build_delivery(Delivery, Message) ->
+    %%Build a Delivery from other delivery
     Mandatory = Delivery#delivery.mandatory,
     Immediate = Delivery#delivery.immediate,
     MsgSeqNo = Delivery#delivery.msg_seq_no,
