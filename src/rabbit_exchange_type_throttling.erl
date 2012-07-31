@@ -14,13 +14,17 @@
 %%      - messages_per_second:   The rate of messages in seconds.
 %% 
 %%  For example:
-%%      - to_exchange= services
-%%      - messages_per_second: 0.017
+%%      - Messages with this headers:
+%%        - to_exchange= services
+%%        - messages_per_second: 0.017
+%%        Delivers a message every 60 seconds to the exchange services.
 %%
-%%      Delivers a message every 60 seconds to the exchange services.
+%%      - Messages with this headers:
+%%       - to_exchange= endpoints
+%%        - messages_per_second: 0.1
+%%        Delivers 10 messages every second to the exchange endpoints.
 %%
-%%  This plugin doesn't accomplish the standar erlang convention and 
-%%  It's very unstable.
+%%  This plugin doesn't accomplish the standar erlang convention
 %%  Take into account that I'm not an erlang programmer nor rabbitmq committer, 
 %%  I appreciate all reviews and feedback.
 
@@ -49,8 +53,6 @@
     {requires, database},
     {enables, external_infrastructure}]}).
 
--define(HEADER_PRUE, "prue").
--define(KEEP_NB, 20).
 -define(RH_TABLE, rh_exchange_throttling_table).
 -record(lastSent, {key, timestamp}).
 
