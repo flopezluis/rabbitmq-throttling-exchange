@@ -15,6 +15,7 @@ This plugin is based on rabbitmq-recent-history-exchange from Alvaro Videla http
       - messages_per_second:   The rate of messages in seconds.
  
   For example:
+  
       - Messages with this headers:
         - to_exchange= services
         - messages_per_second: 0.017
