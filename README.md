@@ -15,12 +15,18 @@ This plugin is based on rabbitmq-recent-history-exchange from Alvaro Videla http
       - messages_per_second:   The rate of messages in seconds.
  
   For example:
-  
-      - to_exchange= services
-      - messages_per_second: 0.017
+      - Messages with this headers:
+        - to_exchange= services
+        - messages_per_second: 0.017
+        Delivers a message every 60 seconds to the exchange services.
 
-      Delivers a message every 60 seconds to the exchange services.
+      - Messages with this headers:
+        - to_exchange= endpoints
+        - messages_per_second: 0.1
+        Delivers 10 messages every second to the exchange endpoints.
 
-  It doesn't accomplish the standar erlang convention and it's very unstable.
+
+
+  It doesn't accomplish the standar erlang convention.
   Take into account that I'm not an erlang programmer nor rabbitmq committer, 
   I appreciate all reviews and feedback.
