@@ -57,7 +57,7 @@
 -record(lastSent, {key, timestamp}).
 
 description() ->
-  [{name, <<"throttling">>},
+  [{name, <<"x-throttling">>},
    {description, <<"List of Last-value caches exchange.">>}].
 
 serialise_events() -> false.
