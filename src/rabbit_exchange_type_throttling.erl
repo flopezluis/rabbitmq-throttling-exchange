@@ -14,17 +14,13 @@
 %%      - messages_per_second:   The rate of messages in seconds.
 %% 
 %%  For example:
-%%      - Messages with this headers:
-%%        - to_exchange= services
-%%        - messages_per_second: 0.017
-%%        Delivers a message every 60 seconds to the exchange services.
+%%      - to_exchange= services
+%%      - messages_per_second: 0.017
 %%
-%%      - Messages with this headers:
-%%       - to_exchange= endpoints
-%%        - messages_per_second: 0.1
-%%        Delivers 10 messages every second to the exchange endpoints.
+%%      Delivers a message every 60 seconds to the exchange services.
 %%
-%%  This plugin doesn't accomplish the standar erlang convention
+%%  This plugin doesn't accomplish the standar erlang convention and 
+%%  It's very unstable.
 %%  Take into account that I'm not an erlang programmer nor rabbitmq committer, 
 %%  I appreciate all reviews and feedback.
 
@@ -39,15 +35,13 @@
          remove_bindings/3, assert_args_equivalence/2]).
 -export([setup_schema/0]).
 
--rabbit_boot_step({rabbit_exchange_type_rh_registry,
-[{description, "throttling exchange type: registry"},
-  {mfa, {rabbit_registry, register,
-          [exchange, <<"x-throttling">>,
-           ?MODULE]}},
-  {requires, rabbit_registry},
-  {enables, kernel_ready}]}).
+-rabbit_boot_step({rabbit_exchange_type_hr_registry,
+  [{description, "throttling exchange type: registry"},
+    {mfa, {rabbit_registry, register, [exchange, <<"x-throttling">>, ?MODULE]}},
+    {requires, rabbit_registry},
+    {enables, kernel_ready}]}).
 
--rabbit_boot_step({rabbit_exchange_type_rh_mnesia,
+-rabbit_boot_step({rabbit_exchange_type_hr_mnesia,
   [{description, "throttling exchange type: mnesia"},
     {mfa, {?MODULE, setup_schema, []}},
     {requires, database},
@@ -66,10 +60,13 @@ current_time_ms() ->
     {Mega,Sec,Micro} = erlang:now(),
     ((Mega*1000000+Sec)*1000000+Micro)/1000.
 
-extract_header(Headers, Key) ->
-    Found = lists:keyfind(Key, 1, Headers),
-    {_,_,Header} = Found,
-    Header.
+extract_header(Headers, Key, Default) ->
+   case lists:keyfind(Key, 1, Headers) of
+        false ->
+            Default;
+        {_,_,Header} ->
+           Header
+    end.
 
 route(#exchange{name = XName}, Delivery) ->
   BasicMessage = (Delivery#delivery.message),
@@ -77,14 +74,14 @@ route(#exchange{name = XName}, Delivery) ->
   Headers = rabbit_basic:extract_headers(Content),
   %Get Last sent from Db
   [RoutingKey|_] = BasicMessage#basic_message.routing_keys,
-  ToExchange = extract_header(Headers, <<"to_exchange">>),
+  ToExchange = extract_header(Headers, <<"to_exchange">>, <<>>),
   LastTime = get_msgs_from_cache(ToExchange),
+  MsgPerSecondStr = extract_header(Headers, <<"messages_per_second">>, <<"0">>),
   if 
-     %First sent
-     LastTime == [] ->
+     %First sent or not frame rate
+     LastTime == [] orelse MsgPerSecondStr == <<"0">> ->
         TimeToNextSent = 0;
      true ->
-        MsgPerSecondStr = extract_header(Headers, <<"messages_per_second">>),
         MsgPerSecond = bin_to_num(MsgPerSecondStr),
         MilisecondsBetweenMsg = 1000 / MsgPerSecond,
         Now = current_time_ms(),
@@ -137,9 +134,8 @@ delete(_Tx, #exchange{ name = XName }, _Bs) ->
     end),
   ok.
 
-add_binding(_Tx, #exchange{ name = XName },
-            #binding{ destination = QName }) ->
-  ok.
+%add_binding(_Tx, #exchange{ name = XName },#binding{ destination = QName }) ->
+add_binding(_Tx, _X, _B) -> ok.
 
 remove_bindings(_Tx, _X, _Bs) -> ok.
 
